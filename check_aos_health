@@ -42,23 +42,6 @@ package SNMP;
 # HP-SwitchStack-MIB::hpStackStatsStackingStatus.0 = INTEGER: unusedStatus(11)
 # HP-SwitchStack-MIB::hpSwitchDiscoveryAdminStatus.0 = INTEGER: enable(1)
 
-# HP-ICF-CHASSIS::hpicfSlotMapSlot.1.1 = INTEGER: 1
-# HP-ICF-CHASSIS::hpicfSlotMapEntity.1.1 = INTEGER: 1
-# HP-ICF-CHASSIS::hpicfSensorIndex.1 = INTEGER: 1
-# HP-ICF-CHASSIS::hpicfSensorIndex.2 = INTEGER: 2
-# HP-ICF-CHASSIS::hpicfSensorObjectId.1 = OID: HP-ICF-OID::icfPowerSupplySensor
-# HP-ICF-CHASSIS::hpicfSensorObjectId.2 = OID: HP-ICF-OID::icfFanSensor
-# HP-ICF-CHASSIS::hpicfSensorNumber.1 = INTEGER: 1
-# HP-ICF-CHASSIS::hpicfSensorNumber.2 = INTEGER: 1
-# HP-ICF-CHASSIS::hpicfSensorStatus.1 = INTEGER: good(4)
-# HP-ICF-CHASSIS::hpicfSensorStatus.2 = INTEGER: good(4)
-# HP-ICF-CHASSIS::hpicfSensorWarnings.1 = Counter32: 0
-# HP-ICF-CHASSIS::hpicfSensorWarnings.2 = Counter32: 0
-# HP-ICF-CHASSIS::hpicfSensorFailures.1 = Counter32: 0
-# HP-ICF-CHASSIS::hpicfSensorFailures.2 = Counter32: 0
-# HP-ICF-CHASSIS::hpicfSensorDescr.1 = STRING: Power Supply Sensor
-# HP-ICF-CHASSIS::hpicfSensorDescr.2 = STRING: Fan Sensor
-
 	my $nametable={
 		"sysDescr"		=> { oid => ".1.3.6.1.2.1.1.1" },
 		"sysName"		=> { oid => ".1.3.6.1.2.1.1.5" },
@@ -116,7 +99,18 @@ package SNMP;
 				10 => "unknownState",
 				11 => "standbyBooting"
 			}
-		}
+		},
+		"hpicfSensorStatus" => { oid => ".1.3.6.1.4.1.11.2.14.11.1.2.6.1.4",
+			value => "table",
+			values => {
+				1 => "unknown",
+				2 => "bad",
+				3 => "warning",
+				4 => "good",
+				5 => "notPresent"
+			}
+		},
+		"hpicfSensorDescr" => { oid => ".1.3.6.1.4.1.11.2.14.11.1.2.6.1.7" }
 	};
 
 	sub new {
@@ -473,6 +467,62 @@ package AOS;
 		$self->{vsfmemberstate}=$self->{snmp}->walk("hpicfVsfVCMemberState");
 	}
 
+	sub sensors_status {
+		my ($self) = @_;
+	
+ 		my @sensors=grep {
+				$_->{hpicfSensorStatus}{string} ne "notPresent"
+			} values %{$self->{sensors}};
+
+		return join(",", map {
+				sprintf("%s=%s",
+					$_->{hpicfSensorDescr}{value},
+					$_->{hpicfSensorStatus}{string});
+				}@sensors );
+	}
+
+	sub sensors_ok {
+		my ($self) = @_;	
+	
+ 		my @sensors=grep {
+				$_->{hpicfSensorStatus}{string} ne "notPresent"
+				&& $_->{hpicfSensorStatus}{string} ne "good"
+			} values %{$self->{sensors}};
+
+		return scalar @sensors == 0;
+	}
+
+	sub sensors_exist {
+		my ($self) = @_;
+
+		return !defined($self->{sensorsdisabled});
+	}
+
+	sub sensors_read {
+		my ($self) = @_;
+
+		my $descr=$self->{snmp}->walk("hpicfSensorDescr");
+
+		if ($descr->{_error} ne '') {
+			$self->{sensorsdisabled}=1;
+			return;
+		}
+		my $status=$self->{snmp}->walk("hpicfSensorStatus");
+
+ 		$self->{sensors}=$self->merge_tables_by_instance($status, $descr);
+
+
+		# All Sensors notPresent? No sensors to report
+		my @sensors=grep {
+				$_->{hpicfSensorStatus}{string} ne "notPresent"
+			} values %{$self->{sensors}};
+
+		if (scalar @sensors == 0) {
+			$self->{sensorsdisabled}=1;
+			return
+		}
+	}
+
 	sub sysDescr {
 		my ($self) = @_;
 
@@ -493,6 +543,7 @@ package AOS;
 		$self->temp_read();
 		$self->ps_read();
  		$self->vsf_read();
+ 		$self->sensors_read();
 
 		return (1, undef);
 	}
@@ -550,7 +601,13 @@ package main;
 		$np->add_message($aos->vsf_ok() ? OK : CRITICAL,
 			sprintf("VSF status: %s", $aos->vsf_status()));
 	}
+
+ 	if ($aos->sensors_exist()) {
+		$np->add_message($aos->sensors_ok() ? OK : CRITICAL,
+			sprintf("Sensor status: %s", $aos->sensors_status()));
+	}
  
+
 	my ($code, $message) = $np->check_messages();
 	$np->plugin_exit( $code, $message );
 1;
