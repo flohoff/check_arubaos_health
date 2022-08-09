@@ -110,7 +110,46 @@ package SNMP;
 				5 => "notPresent"
 			}
 		},
-		"hpicfSensorDescr" => { oid => ".1.3.6.1.4.1.11.2.14.11.1.2.6.1.7" }
+		"hpicfSensorDescr" => { oid => ".1.3.6.1.4.1.11.2.14.11.1.2.6.1.7" },
+
+		"hpStackOperStatus" => { oid => ".1.3.6.1.4.1.11.2.14.11.5.1.69.1.1.2",
+			value => "table",
+			values => {
+				0 => "unAvailable",
+				1 => "disabled",
+				2 => "active",
+				3 => "fragmentInactive",
+				4 => "fragmentActive",
+			}
+		},
+		"hpStackMemberEntryStatus" => { oid => ".1.3.6.1.4.1.11.2.14.11.5.1.69.1.3.1.7",
+			value => "table",
+			values => {
+				1 => "active",
+				2 => "notInService",
+				3 => "notReady",
+				4 => "createAndGo",
+				5 => "createAndWait",
+				6 => "destroy"	
+			}
+		},
+		"hpStackMemberState" => { oid => ".1.3.6.1.4.1.11.2.14.11.5.1.69.1.3.1.9",
+			value => "table",
+			values => {
+				0 => "unusedId",
+				1 => "missing",
+				2 => "provision",
+				3 => "commander",
+				4 => "standby",
+				5 => "member",
+				6 => "shutdown",
+				7 => "booting",
+				8 => "communicationFailure",
+				9 => "incompatibleOS",
+				10 => "unknownState",
+				11 => "standbyBooting"
+			}
+		}
 	};
 
 	sub new {
@@ -523,6 +562,67 @@ package AOS;
 		}
 	}
 
+	sub stack_status {
+		my ($self) = @_;
+
+		my @status=map {
+			sprintf("%s=%s/%s",
+				$_,
+				$self->{stack}{$_}{hpStackMemberEntryStatus}{string},
+				$self->{stack}{$_}{hpStackMemberState}{string})
+			} keys %{$self->{stack}};
+
+		return join(",", @status);
+	}
+
+	sub stack_ok {
+		my ($self) = @_;
+
+		my @nonok=grep {
+				$_->{hpStackMemberEntryStatus}{string} ne "active" 
+				|| (
+					$_->{hpStackMemberState}{string} ne "commander"
+					&& $_->{hpStackMemberState}{string} ne "member"
+					&& $_->{hpStackMemberState}{string} ne "standby"
+				)
+			} values %{$self->{stack}};
+
+		return scalar @nonok == 0;
+	}
+
+	sub stack_exists {
+		my ($self) = @_;
+
+		return defined($self->{stackoperstatus});
+	}
+
+	sub stack_read {
+		my ($self) = @_;
+
+		my $statusresult=$self->{snmp}->get("hpStackOperStatus.0");
+		if (!defined($statusresult) 
+			|| $statusresult->{_error} ne '') {
+			return;
+		}
+
+		if ($statusresult->{"hpStackOperStatus.0"}{value}{value} eq 'noSuchInstance'
+			|| $statusresult->{"hpStackOperStatus.0"}{value}{value} eq 'noSuchObject') {
+			return;
+		}
+
+		my $status=$statusresult->{"hpStackOperStatus.0"}{value}{string};
+		if ($status eq 'disabled' || $status eq 'unAvailable') {
+			return;
+		}
+
+		$self->{stackoperstatus}=$statusresult;	
+
+		my $memberentry=$self->{snmp}->walk("hpStackMemberEntryStatus");
+		my $memberstate=$self->{snmp}->walk("hpStackMemberState");
+
+		$self->{stack}=$self->merge_tables_by_instance($memberentry, $memberstate);
+	}
+
 	sub sysDescr {
 		my ($self) = @_;
 
@@ -542,8 +642,9 @@ package AOS;
 
 		$self->temp_read();
 		$self->ps_read();
- 		$self->vsf_read();
- 		$self->sensors_read();
+		$self->vsf_read();
+		$self->sensors_read();
+		$self->stack_read();
 
 		return (1, undef);
 	}
@@ -585,7 +686,7 @@ package main;
 		$np->plugin_exit(UNKNOWN, sprintf("Failed to read: %s", $error));
 	}
 
-  	$np->add_message(OK, sprintf("%s", $aos->sysDescr()));
+	$np->add_message(OK, sprintf("%s", $aos->sysDescr()));
 
 	if ($aos->temp_exists()) {
 		$np->add_message($aos->temp_ok() ? OK : CRITICAL,
@@ -602,11 +703,15 @@ package main;
 			sprintf("VSF status: %s", $aos->vsf_status()));
 	}
 
- 	if ($aos->sensors_exist()) {
+	if ($aos->sensors_exist()) {
 		$np->add_message($aos->sensors_ok() ? OK : CRITICAL,
 			sprintf("Sensor status: %s", $aos->sensors_status()));
 	}
- 
+
+	if ($aos->stack_exists()) {
+		$np->add_message($aos->stack_ok() ? OK : CRITICAL,
+			sprintf("Stack status: %s", $aos->stack_status()));
+	}
 
 	my ($code, $message) = $np->check_messages();
 	$np->plugin_exit( $code, $message );
