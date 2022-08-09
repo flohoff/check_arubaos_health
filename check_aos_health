@@ -564,7 +564,7 @@ package main;
 
 	my ($opt, $usage) = describe_options(
 		"$Script %o <some-arg>",
-		[ 'host|H=s',		"Aruba CX OS hostname", { required => 1 } ],
+		[ 'host|H=s',		"ArubaOS hostname", { required => 1 } ],
 		[ 'community|C=s',	"SNMP community", { default => 'public' } ],
 		[ 'timeout|t=i',	"Timeout", { default => 15 } ],
 		[],
