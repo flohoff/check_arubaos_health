@@ -1,0 +1,572 @@
+#!/usr/bin/perl -w
+
+package SNMP;
+	use strict;
+	use Data::Dumper;
+
+# FAN-MIB::hpicfFanState.1 = INTEGER: ok(5)
+# FAN-MIB::hpicfFanState.2 = INTEGER: ok(5)
+# FAN-MIB::hpicfFanState.3 = INTEGER: ok(5)
+# FAN-MIB::hpicfFanState.4 = INTEGER: ok(5)
+# FAN-MIB::hpicfFanState.5 = INTEGER: ok(5)
+
+ 
+# HP-VSF-VC-MIB::hpicfVsfVCLinkName.1.1 = STRING: I-Link1_1
+# HP-VSF-VC-MIB::hpicfVsfVCLinkName.1.2 = STRING: I-Link1_2
+# HP-VSF-VC-MIB::hpicfVsfVCLinkName.2.1 = STRING: I-Link2_1
+# HP-VSF-VC-MIB::hpicfVsfVCLinkName.2.2 = STRING: I-Link2_2
+# HP-VSF-VC-MIB::hpicfVsfVCLinkName.3.1 = STRING: I-Link3_1
+# HP-VSF-VC-MIB::hpicfVsfVCLinkName.3.2 = STRING: I-Link3_2
+# HP-VSF-VC-MIB::hpicfVsfVCLinkName.4.1 = STRING: I-Link4_1
+# HP-VSF-VC-MIB::hpicfVsfVCLinkName.4.2 = STRING: I-Link4_2
+# HP-VSF-VC-MIB::hpicfVsfVCLinkOperStatus.1.1 = INTEGER: up(1)
+# HP-VSF-VC-MIB::hpicfVsfVCLinkOperStatus.1.2 = INTEGER: up(1)
+# HP-VSF-VC-MIB::hpicfVsfVCLinkOperStatus.2.1 = INTEGER: up(1)
+# HP-VSF-VC-MIB::hpicfVsfVCLinkOperStatus.2.2 = INTEGER: up(1)
+# HP-VSF-VC-MIB::hpicfVsfVCLinkOperStatus.3.1 = INTEGER: up(1)
+# HP-VSF-VC-MIB::hpicfVsfVCLinkOperStatus.3.2 = INTEGER: up(1)
+# HP-VSF-VC-MIB::hpicfVsfVCLinkOperStatus.4.1 = INTEGER: up(1)
+# HP-VSF-VC-MIB::hpicfVsfVCLinkOperStatus.4.2 = INTEGER: up(1)
+# 
+# HP-VSF-VC-MIB::hpicfVsfVCMemberState.1 = INTEGER: member(5)
+# HP-VSF-VC-MIB::hpicfVsfVCMemberState.2 = INTEGER: member(5)
+# HP-VSF-VC-MIB::hpicfVsfVCMemberState.3 = INTEGER: standby(4)
+# HP-VSF-VC-MIB::hpicfVsfVCMemberState.4 = INTEGER: commander(3)
+# 
+# HP-VSF-VC-MIB::hpicfVsfVCOperStatus.0 = INTEGER: active(2)
+# HP-VSF-VC-MIB::hpicfVsfVCAdminStatus.0 = INTEGER: enable(1)
+# HP-VSF-VC-MIB::hpicfVsfVCTopology.0 = INTEGER: ring(2)
+# 
+# HP-SwitchStack-MIB::hpSwitchStackAdminStatus.0 = INTEGER: candidate(1)
+# HP-SwitchStack-MIB::hpSwitchStackCommandAddr.0 = STRING: 0:0:0:0:0:0
+# HP-SwitchStack-MIB::hpSwitchStackName.0 = ""
+# HP-SwitchStack-MIB::hpSwitchStackPropagate.0 = INTEGER: enable(1)
+# HP-SwitchStack-MIB::hpSwitchStackAutoJoin.0 = INTEGER: enable(1)
+# HP-SwitchStack-MIB::hpSwitchStackAutoGrab.0 = INTEGER: disable(2)
+# HP-SwitchStack-MIB::hpStackStatsName.0 = ""
+# HP-SwitchStack-MIB::hpStackStatsMembersNum.0 = INTEGER: 0
+# HP-SwitchStack-MIB::hpStackStatsMembersUnreachable.0 = INTEGER: 0
+# HP-SwitchStack-MIB::hpStackStatsMemberID.0 = INTEGER: 0
+# HP-SwitchStack-MIB::hpStackStatsMgmtIpAddr.0 = IpAddress: 0.0.0.0
+# HP-SwitchStack-MIB::hpStackStatsStackingStatus.0 = INTEGER: unusedStatus(11)
+# HP-SwitchStack-MIB::hpSwitchDiscoveryAdminStatus.0 = INTEGER: enable(1)
+
+# HP-ICF-CHASSIS::hpicfSlotMapSlot.1.1 = INTEGER: 1
+# HP-ICF-CHASSIS::hpicfSlotMapEntity.1.1 = INTEGER: 1
+# HP-ICF-CHASSIS::hpicfSensorIndex.1 = INTEGER: 1
+# HP-ICF-CHASSIS::hpicfSensorIndex.2 = INTEGER: 2
+# HP-ICF-CHASSIS::hpicfSensorObjectId.1 = OID: HP-ICF-OID::icfPowerSupplySensor
+# HP-ICF-CHASSIS::hpicfSensorObjectId.2 = OID: HP-ICF-OID::icfFanSensor
+# HP-ICF-CHASSIS::hpicfSensorNumber.1 = INTEGER: 1
+# HP-ICF-CHASSIS::hpicfSensorNumber.2 = INTEGER: 1
+# HP-ICF-CHASSIS::hpicfSensorStatus.1 = INTEGER: good(4)
+# HP-ICF-CHASSIS::hpicfSensorStatus.2 = INTEGER: good(4)
+# HP-ICF-CHASSIS::hpicfSensorWarnings.1 = Counter32: 0
+# HP-ICF-CHASSIS::hpicfSensorWarnings.2 = Counter32: 0
+# HP-ICF-CHASSIS::hpicfSensorFailures.1 = Counter32: 0
+# HP-ICF-CHASSIS::hpicfSensorFailures.2 = Counter32: 0
+# HP-ICF-CHASSIS::hpicfSensorDescr.1 = STRING: Power Supply Sensor
+# HP-ICF-CHASSIS::hpicfSensorDescr.2 = STRING: Fan Sensor
+
+	my $nametable={
+		"sysDescr"		=> { oid => ".1.3.6.1.2.1.1.1" },
+		"sysName"		=> { oid => ".1.3.6.1.2.1.1.5" },
+		"hpSystemAirCurrentTemp" => { oid => ".1.3.6.1.4.1.11.2.14.11.1.2.8.1.1.3" },
+		"hpSystemAirOverTemp" => { oid => ".1.3.6.1.4.1.11.2.14.11.1.2.8.1.1.6",
+			value => "table",
+			values => {
+				1 => "yes",
+				2 => "no"
+			},
+		},
+		"hpicfPsState" => { oid => ".1.3.6.1.4.1.11.2.14.11.5.1.55.1.1.1.2",
+			value => "table",
+			values => {
+				1 => 'psNotPresent',
+				2 => 'psNotPlugged',
+				3 => 'psPowered',
+				4 => 'psFailed',
+				5 => 'psPermFailure',
+				6 => 'psMax'
+			}
+		},
+		"hpicfVsfVCOperStatus" => { oid => ".1.3.6.1.4.1.11.2.14.11.5.1.116.1.1.2",
+			value => "table",
+			values => {
+				0 => "unAvailable",
+				1 => "disabled",
+				2 => "active",
+				3 => "fragmentInactive",
+				4 => "fragmentActive",
+			}
+		},
+
+		"hpicfVsfVCAdminStatus" => { oid => ".1.3.6.1.4.1.11.2.14.11.5.1.116.1.1.3",
+			value => "table",
+			values => {
+				1 => "enabled",
+				2 => "disabled"
+			}
+		},
+
+		"hpicfVsfVCMemberState" => { oid => ".1.3.6.1.4.1.11.2.14.11.5.1.116.1.3.1.9",
+			value => "table",
+			values => {
+				0 => "unusedId",
+				1 => "missing",
+				2 => "provision",
+				3 => "commander",
+				4 => "standby",
+				5 => "member",
+				6 => "shutdown",
+				7 => "booting",
+				8 => "communicationFailure",
+				9 => "incompatibleOS",
+				10 => "unknownState",
+				11 => "standbyBooting"
+			}
+		}
+	};
+
+	sub new {
+		my ($class, $host, $community) = @_;
+
+		my $self={};
+		bless $self, $class;
+
+		$self->reversemap();
+		$self->snmp_new_session($host, $community);
+
+		return $self;
+	}
+
+	sub snmp_new_session {
+		my ($self, $host, $community) = @_;
+
+                my ($session,$error)=Net::SNMP->session(
+			Hostname => $host,
+			Version	 => 2,
+			Timeout  => 2,
+			Community => $community
+		);
+
+		$self->{netsnmp}=$session;
+	}
+
+	sub reversemap {
+		my ($self) = @_;
+		foreach my $key ( keys %{$nametable} ) {
+			my $value=$nametable->{$key};
+			$self->{reversetable}{$value->{oid}}=$key;
+		}
+	}
+
+	sub name2oid {
+		my ($self, $mixname) = @_;
+
+		my ($name, $instance) = ($mixname =~ /^([^.]+)([\d\.]*)$/);
+		my $oid=$nametable->{$name}{oid} . $instance;
+
+		#printf("Mixname $mixname Name: $name instance $instance oid $oid\n");
+
+		return $oid;
+	}
+
+	sub oid2name {
+		my ($self, $oid) = @_;
+		my ($full, $name, $instance) = $self->oid2name_all($oid);
+		return $full;
+	}
+
+	sub instance_decode_string {
+		my ($self, $instance) = @_;
+
+		# .100.97.116.97.51 = STRING: "data3"
+		my $string="";	
+		while($instance =~ s/^\.(\d+)//) {
+			$string.=chr($1);
+		}
+		return $string
+	}
+
+	sub instance_decode_uuidnum {
+		my ($self, $instance) = @_;
+		# .36.49.48.51.99.55.102.100.100.45.51.50.56.99.45.54.102.98.101.45.98.55.55.55.45.100.57.98.50.102.48.98.48.50.49.97.57.1
+		$instance =~ s/^\.//;
+		my @elem=split(/\./, $instance);
+		my $count=shift @elem;
+		my $uuid=join("", map { chr($_) } splice(@elem, 0, $count));
+
+		return sprintf('"%s".%s', $uuid, join(".", @elem));
+	}
+
+
+	sub value_decode_table {
+		my ($self, $value, $def) = @_;
+
+		my $tvalue=$def->{values}{$value};
+		if (defined($tvalue)) {
+			return { value => $value, string => $tvalue, full => sprintf("%s(%d)", $tvalue, $value) };
+		}
+
+		return { value => $value };
+	}
+
+	sub value_decode_fixup_decimal {
+		my ($self, $value, $def) = @_;
+
+		$value=~s/,//g;
+
+		return { value => $value };
+	}
+
+	sub value_decode {
+		my ($self, $name, $value) = @_;
+
+		my $def=$nametable->{$name};
+		if (!defined($def) || !defined($def->{value})) {
+			return { value => $value };
+		}
+
+		if ($def->{value} eq "table") {
+			return $self->value_decode_table($value, $def);
+		} elsif ($def->{value} eq "fixupdecimal") {
+			return $self->value_decode_fixup_decimal($value, $def);
+		}
+
+		return { value => $value };
+	}
+
+	sub instance_decode {
+		my ($self, $name, $instance) = @_;
+
+		my $def=$nametable->{$name};
+		if (!defined($def) || !defined($def->{instance})) {
+			return $instance;
+		}
+
+		if ($def->{instance} eq 'string') {
+			return $self->instance_decode_string($instance);
+		} elsif ($def->{instance} eq 'uuidnum') {
+			return $self->instance_decode_uuidnum($instance);
+		}
+
+		return $instance;
+	}
+
+	sub oid2name_all {
+		my ($self, $oid) = @_;
+
+		my $instance="";
+		while(length($oid) > 1) {
+			my $name=$self->{reversetable}{$oid};
+			if (defined($name)) {
+				return ( $name . $instance, $name, $self->instance_decode($name, $instance) );
+			}
+
+			$oid =~ s/(\.\d+)$//;
+			$instance=$1 . $instance;
+		}
+		die("OID Problem: $oid $instance");
+	}
+
+	sub _parse_request {
+		my $self=shift;
+		my @request=map { $self->name2oid($_) } @_;
+		return \@request;
+	}
+
+	sub _parse_response {
+		my ($self, $roid, $error) = @_;
+
+		my $r={};
+		foreach my $k ( keys %{$roid} ) {
+			my $value=$roid->{$k};
+			my ($full, $name, $instance)=$self->oid2name_all($k);
+			$r->{$full}={ name => $name, instance => $instance, value => $self->value_decode($name, $value) };
+		}
+
+		$r->{_error}=$error;
+
+		return $r;
+	}
+	
+	sub get {
+		my ($self, @args) = @_;
+
+		my $r=$self->{netsnmp}->get_request(-varbindlist =>
+			$self->_parse_request(@args));
+
+		return $self->_parse_response($r, $self->{netsnmp}->error());
+	}
+
+	sub walk {
+		my ($self, $base) = @_;
+
+		my $r=$self->{netsnmp}->get_table(-baseoid => $self->name2oid($base));
+		return $self->_parse_response($r, $self->{netsnmp}->error());
+	}
+
+1;
+
+package AOS;
+	use strict;
+	use Net::SNMP;
+	use Data::Dumper;
+	use List::MoreUtils qw/frequency/;
+
+	sub new {
+		my ($class, $snmp) = @_;
+		my $self = {
+			snmp => $snmp,
+		};
+
+	 	bless $self, $class;
+
+		return $self;
+	}
+
+	sub merge_tables_by_instance {
+		my ($self, @tables) = @_;
+
+		my $result={};
+
+		foreach my $table ( @tables ) {
+			foreach my $k ( keys %${table} ) {
+				next if ($k =~ /_error/);
+				my $v=$table->{$k};
+
+				my $i=$v->{instance};
+				$i=~s/^\.//;
+				$result->{$i}{$v->{name}}=$v->{value};
+			}
+		}
+
+		return $result;
+	}
+
+	sub temp_status {
+		my ($self) = @_;
+ 		my @temp=values %{$self->{temp}};
+
+		my @status=map {
+			$_->{hpSystemAirCurrentTemp}{value} . "/" .
+				(($_->{hpSystemAirOverTemp}{string} eq 'no') ? 'ok' : 'fail');
+			} @temp;
+
+		return join(",", @status);
+	}
+
+	sub temp_ok {
+		my ($self) = @_;
+
+ 		my @nonok=grep {
+			$_->{hpSystemAirOverTemp}{string} ne 'no'
+		} values %{$self->{temp}};
+
+		return scalar @nonok == 0;
+	}
+
+	sub temp_exists {
+		my ($self) = @_;
+
+		return !defined($self->{tempnotavailable});
+	}
+
+	sub temp_read {
+		my ($self) = @_;
+
+		my $currenttemp=$self->{snmp}->walk("hpSystemAirCurrentTemp");
+
+		if (defined($currenttemp->{_error}) && $currenttemp->{_error} ne '') {
+			$self->{tempnotavailable}=1;
+			return;
+		}
+		my $overtemp=$self->{snmp}->walk("hpSystemAirOverTemp");
+ 		$self->{temp}=$self->merge_tables_by_instance($overtemp, $currenttemp);
+	}
+
+
+	sub ps_status {
+		my ($self) = @_;
+
+		my @psus=grep {
+				ref $_ eq 'HASH'
+					&& $_->{value}{string} ne 'psNotPresent';
+			} values %{$self->{ps}};
+
+		my %freq=frequency map { $_->{value}{string}; } @psus;
+		my @list=map { sprintf("%s(%d)", $_, $freq{$_}) } keys %freq;
+
+		return join(",", @list);
+	}
+
+	sub ps_ok {
+		my ($self) = @_;
+
+ 		my @nonok=grep {
+				ref $_ eq 'HASH'
+					&& $_->{value}{string} ne 'psPowered' 
+					&& $_->{value}{string} ne 'psNotPresent'
+			} values %{$self->{ps}};
+
+		return scalar @nonok == 0;
+	}
+
+	sub ps_exists {
+		my ($self) = @_;
+
+		return defined($self->{ps});	
+	}
+
+	sub ps_read {
+		my ($self) = @_;
+
+		my $ps=$self->{snmp}->walk("hpicfPsState");
+
+		if ($ps->{_error} ne '') {
+			return;
+		}
+
+		$self->{ps}=$ps;
+	}
+
+	sub vsf_status {
+		my ($self) = @_;
+
+		my @vsfmember=grep {
+				ref $_ eq 'HASH'
+			} values %{$self->{vsfmemberstate}};
+
+		my %freq=frequency map { $_->{value}{string}; } @vsfmember;
+		my @list=map { sprintf("%s(%d)", $_, $freq{$_}) } keys %freq;
+
+		return join(",", @list);
+	}
+
+	sub vsf_ok {
+		my ($self) = @_;
+
+		my @nonok=grep {
+				ref $_ eq 'HASH'
+					&& $_->{value}{string} ne 'member' 
+					&& $_->{value}{string} ne 'commander'
+					&& $_->{value}{string} ne 'standby'
+			} values %{$self->{vsfmemberstate}};
+
+		my $operstate=$self->{vsfoperstatus}{"hpicfVsfVCOperStatus.0"}{value}{string};
+
+		return scalar @nonok == 0 && $operstate eq 'active';
+	}
+
+	sub vsf_exists {
+		my ($self) = @_;
+
+		return !defined($self->{vsfdisabled});
+	}
+
+	sub vsf_read {
+		my ($self) = @_;
+
+		my $adminstatus=$self->{snmp}->get("hpicfVsfVCAdminStatus.0");
+
+		if ($adminstatus->{_error} ne ''
+			|| $adminstatus->{"hpicfVsfVCAdminStatus.0"}{value}{value} eq 'noSuchInstance'
+			|| $adminstatus->{"hpicfVsfVCAdminStatus.0"}{value}{string} eq 'disabled') {
+			$self->{vsfdisabled}=1;
+			return;
+		}
+
+		$self->{vsfoperstatus}=$self->{snmp}->get("hpicfVsfVCOperStatus.0");
+		$self->{vsfmemberstate}=$self->{snmp}->walk("hpicfVsfVCMemberState");
+	}
+
+	sub sysDescr {
+		my ($self) = @_;
+
+		# Drop long sysDescr
+		# Aruba 2930F VSF VC, revision WC.16.11.0003, ROM WC.16.01.0010 (/ws/swbuildm/rel_beluru_qaoff/code/build/lvm(swbuildm_rel_beluru_qaoff_rel_beluru))
+		return $self->{sysDescr}{"sysDescr.0"}{value}{value} =~ s/,.*$//r;
+	}
+
+	sub read {
+		my ($self) = @_;
+
+		$self->{sysDescr}=$self->{snmp}->get("sysDescr.0");
+
+		if ($self->{sysDescr}{_error} ne '') {
+			return (0, $self->{sysDescr}{_error});
+		}
+
+		$self->temp_read();
+		$self->ps_read();
+ 		$self->vsf_read();
+
+		return (1, undef);
+	}
+1;
+
+package main;
+
+	use strict;
+	use open IO => ":encoding(utf-8)";
+	use open ':std';
+	use Data::Dumper;
+	use POSIX;
+	use List::MoreUtils qw/frequency/;
+
+	use Monitoring::Plugin;
+	use Getopt::Long::Descriptive;
+	use FindBin qw($Bin $Script);
+
+	my ($opt, $usage) = describe_options(
+		"$Script %o <some-arg>",
+		[ 'host|H=s',		"Aruba CX OS hostname", { required => 1 } ],
+		[ 'community|C=s',	"SNMP community", { default => 'public' } ],
+		[ 'timeout|t=i',	"Timeout", { default => 15 } ],
+		[],
+		[ 'help',               "print usage message and exit", { shortcircuit => 1 } ],
+	);
+
+	print($usage->text), exit if $opt->help;
+
+	my $np = Monitoring::Plugin->new(
+		timeout => $opt->timeout
+	);
+
+	my $snmp=new SNMP($opt->host, $opt->community);
+	my $aos=new AOS($snmp);
+
+	my ($rc, $error)=$aos->read();
+	if (!$rc) {
+		$np->plugin_exit(UNKNOWN, sprintf("Failed to read: %s", $error));
+	}
+
+  	$np->add_message(OK, sprintf("%s", $aos->sysDescr()));
+
+	if ($aos->temp_exists()) {
+		$np->add_message($aos->temp_ok() ? OK : CRITICAL,
+			sprintf("Temp status: %s", $aos->temp_status()));
+	}
+
+	if ($aos->ps_exists()) {
+		$np->add_message($aos->ps_ok() ? OK : CRITICAL,
+			sprintf("PSU status: %s", $aos->ps_status()));
+	}
+
+	if ($aos->vsf_exists()) {
+		$np->add_message($aos->vsf_ok() ? OK : CRITICAL,
+			sprintf("VSF status: %s", $aos->vsf_status()));
+	}
+ 
+#  	$np->add_message($aos->psu_ok() ? OK : CRITICAL,
+#  		sprintf("PSU status: %s", $aos->psu_status()));
+# 
+# 	if ($aos->vsx_enabled()) {
+# 		$np->add_message($aos->vsx_ok() ? OK : CRITICAL,
+# 			sprintf("VSX status: %s", $aos->vsx_status()));
+# 	}
+ 
+	my ($code, $message) = $np->check_messages();
+	$np->plugin_exit( $code, $message );
+1;
