@@ -461,8 +461,6 @@ package AOS;
 
 		my $adminstatus=$self->{snmp}->get("hpicfVsfVCAdminStatus.0");
 
-		print Dumper($adminstatus);
-
 		if ($adminstatus->{_error} ne ''
 			|| $adminstatus->{"hpicfVsfVCAdminStatus.0"}{value}{value} eq 'noSuchInstance'
 			|| $adminstatus->{"hpicfVsfVCAdminStatus.0"}{value}{value} eq 'noSuchObject'
