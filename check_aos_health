@@ -559,14 +559,6 @@ package main;
 			sprintf("VSF status: %s", $aos->vsf_status()));
 	}
  
-#  	$np->add_message($aos->psu_ok() ? OK : CRITICAL,
-#  		sprintf("PSU status: %s", $aos->psu_status()));
-# 
-# 	if ($aos->vsx_enabled()) {
-# 		$np->add_message($aos->vsx_ok() ? OK : CRITICAL,
-# 			sprintf("VSX status: %s", $aos->vsx_status()));
-# 	}
- 
 	my ($code, $message) = $np->check_messages();
 	$np->plugin_exit( $code, $message );
 1;
