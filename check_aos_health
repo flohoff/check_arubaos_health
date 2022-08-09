@@ -28,15 +28,6 @@ package SNMP;
 # HP-VSF-VC-MIB::hpicfVsfVCLinkOperStatus.4.1 = INTEGER: up(1)
 # HP-VSF-VC-MIB::hpicfVsfVCLinkOperStatus.4.2 = INTEGER: up(1)
 # 
-# HP-VSF-VC-MIB::hpicfVsfVCMemberState.1 = INTEGER: member(5)
-# HP-VSF-VC-MIB::hpicfVsfVCMemberState.2 = INTEGER: member(5)
-# HP-VSF-VC-MIB::hpicfVsfVCMemberState.3 = INTEGER: standby(4)
-# HP-VSF-VC-MIB::hpicfVsfVCMemberState.4 = INTEGER: commander(3)
-# 
-# HP-VSF-VC-MIB::hpicfVsfVCOperStatus.0 = INTEGER: active(2)
-# HP-VSF-VC-MIB::hpicfVsfVCAdminStatus.0 = INTEGER: enable(1)
-# HP-VSF-VC-MIB::hpicfVsfVCTopology.0 = INTEGER: ring(2)
-# 
 # HP-SwitchStack-MIB::hpSwitchStackAdminStatus.0 = INTEGER: candidate(1)
 # HP-SwitchStack-MIB::hpSwitchStackCommandAddr.0 = STRING: 0:0:0:0:0:0
 # HP-SwitchStack-MIB::hpSwitchStackName.0 = ""
@@ -470,8 +461,11 @@ package AOS;
 
 		my $adminstatus=$self->{snmp}->get("hpicfVsfVCAdminStatus.0");
 
+		print Dumper($adminstatus);
+
 		if ($adminstatus->{_error} ne ''
 			|| $adminstatus->{"hpicfVsfVCAdminStatus.0"}{value}{value} eq 'noSuchInstance'
+			|| $adminstatus->{"hpicfVsfVCAdminStatus.0"}{value}{value} eq 'noSuchObject'
 			|| $adminstatus->{"hpicfVsfVCAdminStatus.0"}{value}{string} eq 'disabled') {
 			$self->{vsfdisabled}=1;
 			return;
