@@ -149,6 +149,18 @@ package SNMP;
 				10 => "unknownState",
 				11 => "standbyBooting"
 			}
+		},
+		"hpicfFanState" => { oid => ".1.3.6.1.4.1.11.2.14.11.5.1.54.2.1.1.4",
+			value => "table",
+			values => {
+				0 => "failed",
+				1 => "removed",
+				2 => "off",
+				3 => "underspeed",
+				4 => "overspeed",
+				5 => "ok",
+				6 => "maxstate"
+			}
 		}
 	};
 
@@ -623,6 +635,47 @@ package AOS;
 		$self->{stack}=$self->merge_tables_by_instance($memberentry, $memberstate);
 	}
 
+	sub fan_status {
+		my ($self) = @_;
+
+		my @fans=grep {
+				ref $_ eq 'HASH'
+			} values %{$self->{fan}};
+
+		my %freq=frequency map { $_->{value}{string}; } @fans;
+		my @list=map { sprintf("%s(%d)", $_, $freq{$_}) } keys %freq;
+
+		return join(",", @list);
+	}
+
+	sub fan_ok {
+		my ($self) = @_;
+
+		my @nonok=grep {
+				ref $_ eq 'HASH'
+					&& $_->{value}{string} ne 'ok' 
+			} values %{$self->{fan}};
+
+		return scalar @nonok == 0;
+	}
+
+	sub fan_exists {
+		my ($self) = @_;
+		return defined($self->{fan});
+	}
+
+	sub fan_read {
+		my ($self) = @_;
+
+		my $fan=$self->{snmp}->walk("hpicfFanState");
+
+		if ($fan->{_error} ne '') {
+			return;
+		}	
+
+		$self->{fan}=$fan;
+	}
+
 	sub sysDescr {
 		my ($self) = @_;
 
@@ -645,6 +698,7 @@ package AOS;
 		$self->vsf_read();
 		$self->sensors_read();
 		$self->stack_read();
+		$self->fan_read();
 
 		return (1, undef);
 	}
@@ -712,6 +766,12 @@ package main;
 		$np->add_message($aos->stack_ok() ? OK : CRITICAL,
 			sprintf("Stack status: %s", $aos->stack_status()));
 	}
+
+	if ($aos->fan_exists()) {
+		$np->add_message($aos->fan_ok() ? OK : CRITICAL,
+			sprintf("Fan status: %s", $aos->fan_status()));
+	}
+
 
 	my ($code, $message) = $np->check_messages();
 	$np->plugin_exit( $code, $message );
