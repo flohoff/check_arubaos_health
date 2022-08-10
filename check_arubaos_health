@@ -4,13 +4,6 @@ package SNMP;
 	use strict;
 	use Data::Dumper;
 
-# FAN-MIB::hpicfFanState.1 = INTEGER: ok(5)
-# FAN-MIB::hpicfFanState.2 = INTEGER: ok(5)
-# FAN-MIB::hpicfFanState.3 = INTEGER: ok(5)
-# FAN-MIB::hpicfFanState.4 = INTEGER: ok(5)
-# FAN-MIB::hpicfFanState.5 = INTEGER: ok(5)
-
- 
 # HP-VSF-VC-MIB::hpicfVsfVCLinkName.1.1 = STRING: I-Link1_1
 # HP-VSF-VC-MIB::hpicfVsfVCLinkName.1.2 = STRING: I-Link1_2
 # HP-VSF-VC-MIB::hpicfVsfVCLinkName.2.1 = STRING: I-Link2_1
@@ -27,21 +20,7 @@ package SNMP;
 # HP-VSF-VC-MIB::hpicfVsfVCLinkOperStatus.3.2 = INTEGER: up(1)
 # HP-VSF-VC-MIB::hpicfVsfVCLinkOperStatus.4.1 = INTEGER: up(1)
 # HP-VSF-VC-MIB::hpicfVsfVCLinkOperStatus.4.2 = INTEGER: up(1)
-# 
-# HP-SwitchStack-MIB::hpSwitchStackAdminStatus.0 = INTEGER: candidate(1)
-# HP-SwitchStack-MIB::hpSwitchStackCommandAddr.0 = STRING: 0:0:0:0:0:0
-# HP-SwitchStack-MIB::hpSwitchStackName.0 = ""
-# HP-SwitchStack-MIB::hpSwitchStackPropagate.0 = INTEGER: enable(1)
-# HP-SwitchStack-MIB::hpSwitchStackAutoJoin.0 = INTEGER: enable(1)
-# HP-SwitchStack-MIB::hpSwitchStackAutoGrab.0 = INTEGER: disable(2)
-# HP-SwitchStack-MIB::hpStackStatsName.0 = ""
-# HP-SwitchStack-MIB::hpStackStatsMembersNum.0 = INTEGER: 0
-# HP-SwitchStack-MIB::hpStackStatsMembersUnreachable.0 = INTEGER: 0
-# HP-SwitchStack-MIB::hpStackStatsMemberID.0 = INTEGER: 0
-# HP-SwitchStack-MIB::hpStackStatsMgmtIpAddr.0 = IpAddress: 0.0.0.0
-# HP-SwitchStack-MIB::hpStackStatsStackingStatus.0 = INTEGER: unusedStatus(11)
-# HP-SwitchStack-MIB::hpSwitchDiscoveryAdminStatus.0 = INTEGER: enable(1)
-
+#
 	my $nametable={
 		"sysDescr"		=> { oid => ".1.3.6.1.2.1.1.1" },
 		"sysName"		=> { oid => ".1.3.6.1.2.1.1.5" },
