@@ -40,7 +40,10 @@ package SNMP;
 				3 => 'psPowered',
 				4 => 'psFailed',
 				5 => 'psPermFailure',
-				6 => 'psMax'
+				6 => 'psMax',
+				7 => 'AuxFailure',
+				8 => 'NotPowered',
+				9 => 'AuxNotPowered'
 			}
 		},
 		"hpicfVsfVCOperStatus" => { oid => ".1.3.6.1.4.1.11.2.14.11.5.1.116.1.1.2",
