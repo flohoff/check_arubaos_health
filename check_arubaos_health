@@ -24,6 +24,7 @@ package SNMP;
 	my $nametable={
 		"sysDescr"		=> { oid => ".1.3.6.1.2.1.1.1" },
 		"sysName"		=> { oid => ".1.3.6.1.2.1.1.5" },
+		"hpSwitchOsVersion"	=> { oid => ".1.3.6.1.4.1.11.2.14.11.5.1.1.3" },
 		"hpSystemAirCurrentTemp" => { oid => ".1.3.6.1.4.1.11.2.14.11.1.2.8.1.1.3" },
 		"hpSystemAirOverTemp" => { oid => ".1.3.6.1.4.1.11.2.14.11.1.2.8.1.1.6",
 			value => "table",
@@ -663,16 +664,22 @@ package AOS;
 
 		# Drop long sysDescr
 		# Aruba 2930F VSF VC, revision WC.16.11.0003, ROM WC.16.01.0010 (/ws/swbuildm/rel_beluru_qaoff/code/build/lvm(swbuildm_rel_beluru_qaoff_rel_beluru))
-		return $self->{sysDescr}{"sysDescr.0"}{value}{value} =~ s/,.*$//r;
+		return $self->{sysinfo}{"sysDescr.0"}{value}{value} =~ s/,.*$//r;
+	}
+
+	sub hpSwitchOsVersion {
+		my ($self) = @_;
+		return $self->{sysinfo}{"hpSwitchOsVersion.0"}{value}{value};
 	}
 
 	sub read {
 		my ($self) = @_;
 
-		$self->{sysDescr}=$self->{snmp}->get("sysDescr.0");
+		$self->{sysinfo}=$self->{snmp}->get("sysDescr.0", "hpSwitchOsVersion.0");
 
-		if ($self->{sysDescr}{_error} ne '') {
-			return (0, $self->{sysDescr}{_error});
+
+		if ($self->{sysinfo}{_error} ne '') {
+			return (0, $self->{sysinfo}{_error});
 		}
 
 		$self->temp_read();
@@ -722,7 +729,7 @@ package main;
 		$np->plugin_exit(UNKNOWN, sprintf("Failed to read: %s", $error));
 	}
 
-	$np->add_message(OK, sprintf("%s", $aos->sysDescr()));
+	$np->add_message(OK, sprintf("%s FWVersion %s", $aos->sysDescr(), $aos->hpSwitchOsVersion()));
 
 	if ($aos->temp_exists()) {
 		$np->add_message($aos->temp_ok() ? OK : CRITICAL,
